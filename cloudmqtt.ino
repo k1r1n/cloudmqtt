@@ -1,57 +1,89 @@
+#include "DHT.h"
+#define DHTPIN D4 
+#define DHTTYPE DHT22
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include <TinyGPS++.h>
-#include <SoftwareSerial.h>
-static const int RXPin = D7, TXPin = D8;
-static const uint32_t GPSBaud = 9600;
-const char* ssid = "";
-const char* password = ""; 
-const char* userMQTT = "";
-const char* passwordMQTT = "";
-const char* mqtt_server = "";
-unsigned long interval = 3600000;
-SoftwareSerial ss(RXPin,TXPin);
-TinyGPSPlus gps;
-WiFiClient espClient; 
+
+// Update these with values suitable for your network.
+
+const char* ssid = "Apple TV";
+const char* password = "APPLE_TV";
+const char* mqtt_server = "m10.cloudmqtt.com";
+WiFiClient espClient;
 PubSubClient client(espClient);
-void setup_wifi() { 
+long lastMsg = 0;
+String msg;
+int value = 0;
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup_wifi() {
+
   delay(10);
+  // We start by connecting to a WiFi network
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
+
   WiFi.begin(ssid, password);
+
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
+
   Serial.println("");
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-  }
-  static void smartDelay(unsigned long ms){
-  unsigned long start = millis();
-  do 
-  {
-    pinMode(D7, INPUT);
-    while (ss.available())
-    gps.encode(ss.read());
-  } while (millis() - start < ms);
-    pinMode(D7, OUTPUT);
 }
+
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived [");
+  Serial.print(topic);
+  Serial.print("] ");
+  for (int i = 0; i < length; i++) {
+    Serial.print((char)payload[i]);
+  }
+  Serial.println();
+
+  // Switch on the LED if an 1 was received as first character
+  if ((char)payload[0] == '1') {
+    digitalWrite(BUILTIN_LED, LOW);   // Turn the LED on (Note that LOW is the voltage level
+    // but actually the LED is on; this is because
+    // it is acive low on the ESP-01)
+  } else {
+    digitalWrite(BUILTIN_LED, HIGH);  // Turn the LED off by making the voltage HIGH
+  }
+
+}
+
+void setup() {
+  pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+  Serial.begin(115200);
+  setup_wifi();
+  client.setServer(mqtt_server, 18106);
+  client.setCallback(callback);
+  dht.begin();
+  if(client.connect("mqtt","vawetfuo","SoHR1xR97Ldw")){
+    Serial.println("MQTT Connect");
+  }
+}
+
+
+
+
 void reconnect() {
   // Loop until we're reconnected
-  setup_wifi();
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
-    if(client.connect("BUS2","ytlxebxo","KTDUKgjPltyC")) {
+    if (client.connect("ESP8266Client")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      String message = "" + String(gps.location.lat(),6)+"," + String(gps.location.lng(),6);
-      smartDelay(1000);
-      client.publish("BUS2", String(message).c_str(), true);
+      client.publish("outTopic", "hello world");
       // ... and resubscribe
+      client.subscribe("inTopic");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -61,24 +93,29 @@ void reconnect() {
     }
   }
 }
-void setup() {
-  Serial.begin(115200);
-  setup_wifi();
-  client.setServer(mqtt_server, 16406);
-  if (client.connect("BUS2",userMQTT,passwordMQTT)) {
-    Serial.println("MQTT connected");
-  }
-}
 void loop() {
-  if(millis() >= interval) {
-    ESP.reset();
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+  float f = dht.readTemperature(true);
+  if (!client.connected()) {
+    reconnect();
   }
-  if (client.connected() != 1 || WiFi.status() != WL_CONNECTED){
-    reconnect(); 
-  }
-  String message = "" + String(gps.location.lat(),6)+"," + String(gps.location.lng(),6);
-  smartDelay(1000); 
-  Serial.println(message);
-  client.publish("BUS2",String(message).c_str(), true); 
   client.loop();
+
+  long now = millis();
+  if (now - lastMsg > 2000) {
+    lastMsg = now;
+    ++value;
+    String msg = ""+String(h,2)+","+String(t,2);
+//    Serial.print("Humidity: ");
+//    Serial.print(h);
+//    Serial.print(" %\t");
+//    Serial.print("Temperature: ");
+//    Serial.print(t);
+//    Serial.print(" *C ");
+//    snprintf (msg, 75, "hello world #%ld", value);
+    Serial.print("Publish message: ");
+    Serial.println(msg);
+    client.publish("outTopic", msg.c_str());
+  }
 }
