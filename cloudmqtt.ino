@@ -1,5 +1,5 @@
 #include "DHT.h"
-#define DHTPIN D4 
+#define DHTPIN D1 
 #define DHTTYPE DHT22
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
@@ -27,8 +27,8 @@ void setup_wifi() {
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+    delay(1000);
+    Serial.println("Not Connect WiFi");
   }
 
   Serial.println("");
@@ -62,10 +62,10 @@ void setup() {
   pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
   Serial.begin(115200);
   setup_wifi();
-  client.setServer(mqtt_server, 18106);
+  client.setServer(mqtt_server, 14722);
   client.setCallback(callback);
   dht.begin();
-  if(client.connect("mqtt","vawetfuo","SoHR1xR97Ldw")){
+  if(client.connect("mqtt","tcrneekt","07v8_laI4cNB")){
     Serial.println("MQTT Connect");
   }
 }
@@ -81,9 +81,9 @@ void reconnect() {
     if (client.connect("ESP8266Client")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
+      //client.publish("Hm", "hello world");
       // ... and resubscribe
-      client.subscribe("inTopic");
+      //client.subscribe("inTopic");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -116,6 +116,6 @@ void loop() {
 //    snprintf (msg, 75, "hello world #%ld", value);
     Serial.print("Publish message: ");
     Serial.println(msg);
-    client.publish("outTopic", msg.c_str());
+    client.publish("Hm", msg.c_str());
   }
 }
