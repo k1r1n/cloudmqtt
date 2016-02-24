@@ -4,11 +4,11 @@
 #include <SoftwareSerial.h>
 static const int RXPin = D7, TXPin = D8;
 static const uint32_t GPSBaud = 9600;
-const char* ssid = "FTIM INTLAB FiWi";
+const char* ssid = "";
 const char* password = ""; 
-const char* userMQTT = "vawetfuo";
-const char* passwordMQTT = "SoHR1xR97Ldw";
-const char* mqtt_server = " m10.cloudmqtt.com";
+const char* userMQTT = "";
+const char* passwordMQTT = "";
+const char* mqtt_server = "";
 unsigned long interval = 3600000;
 SoftwareSerial ss(RXPin,TXPin);
 TinyGPSPlus gps;
